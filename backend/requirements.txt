@@ -1,0 +1,4 @@
+reportlab
+xlsxwriter
+gunicorn
+python-dotenv 
