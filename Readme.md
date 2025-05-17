@@ -42,7 +42,7 @@ pip install -r requirements.txt
 ### 运行应用
 
 ```bash
-streamlit run app.py
+python app.py
 ```
 
 ### 数据集
