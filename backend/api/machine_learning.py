@@ -39,17 +39,12 @@ class MachineLearningAPI:
     def prepare_data(self, test_size=0.2, random_state=42):
         """Prepare data for model training"""
         try:
-            from api.data_processing import DataProcessingAPI
-            data_api = DataProcessingAPI()
-            
-            # Get the training data
-            if data_api.train_data is None:
+            # Check if training data is available
+            if self.train_data is None:
                 return jsonify({
                     'status': 'error',
                     'message': 'No training data available'
                 }), 404
-            
-            self.train_data = data_api.train_data
             
             # Get features and targets
             X = self.train_data.iloc[:, :-self.num_targets]

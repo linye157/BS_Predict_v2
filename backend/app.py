@@ -93,6 +93,20 @@ def prepare_data():
     test_size = data.get('test_size', 0.2)
     random_state = data.get('random_state', 42)
     
+    # Pass the existing training data to machine learning API
+    if data_processing_api.train_data is None:
+        return jsonify({
+            'status': 'error',
+            'message': 'No training data available'
+        }), 404
+    
+    # Set the training data in the machine learning API
+    machine_learning_api.train_data = data_processing_api.train_data
+    
+    # Pass test data if available
+    if data_processing_api.test_data is not None:
+        machine_learning_api.test_data = data_processing_api.test_data
+    
     return machine_learning_api.prepare_data(test_size, random_state)
 
 @app.route('/api/ml/train', methods=['POST'])
@@ -129,6 +143,23 @@ def train_stacking_ensemble():
     base_models = data.get('base_models', [])
     meta_model = data.get('meta_model', 'lr')
     target_idx = data.get('target_idx', 0)
+
+    # Ensure data is prepared in MachineLearningAPI
+    if (machine_learning_api.X_train is None or
+        machine_learning_api.y_train is None or
+        machine_learning_api.X_test is None or
+        machine_learning_api.y_test is None):
+        return jsonify({
+            'status': 'error',
+            'message': 'Machine learning data not prepared. Please prepare data in the ML section first.'
+        }), 400
+
+    # Pass necessary data from machine_learning_api to stacking_ensemble_api
+    stacking_ensemble_api.X_train = machine_learning_api.X_train
+    stacking_ensemble_api.y_train = machine_learning_api.y_train
+    stacking_ensemble_api.X_test = machine_learning_api.X_test
+    stacking_ensemble_api.y_test = machine_learning_api.y_test
+    stacking_ensemble_api.trained_base_models = machine_learning_api.models # Pass all trained models
     
     return stacking_ensemble_api.train_stacking_ensemble(base_models, meta_model, target_idx)
 
