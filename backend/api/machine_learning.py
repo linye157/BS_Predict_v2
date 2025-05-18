@@ -140,7 +140,7 @@ class MachineLearningAPI:
                 
                 feature_importance = model.feature_importances_.tolist() if hasattr(model, 'feature_importances_') else None
                 
-            elif model_type == 'xgbr':
+            elif model_type in ['xgbr', 'xgb']:
                 # XGBoost Regressor
                 n_estimators = params.get('n_estimators', 100)
                 learning_rate = params.get('learning_rate', 0.1)

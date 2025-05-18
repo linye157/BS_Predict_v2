@@ -104,8 +104,12 @@ export default {
       }, 500)
       
       try {
+        // 处理模型名称，添加目标前缀
+        // 直接传递模型前缀，让后端处理转换
+        const baseModelPrefixes = this.stackingForm.baseModels
+        
         const response = await trainStackingEnsemble(
-          this.stackingForm.baseModels,
+          baseModelPrefixes, // 直接使用模型前缀，让后端处理
           this.stackingForm.metaModel,
           this.stackingForm.targetIdx
         )
@@ -113,31 +117,44 @@ export default {
         clearInterval(interval)
         this.progress = 100
         
+        if (response.data.status !== 'success') {
+          throw new Error(response.data.message || '训练失败，但未返回具体错误信息')
+        }
+        
         this.result = response.data
         
         // 设置总体结果
         this.resultTable = [
           {
             model: 'Stacking集成',
-            r2: this.result.ensemble_metrics.r2.toFixed(4),
-            mse: this.result.ensemble_metrics.mse.toFixed(4),
-            mae: this.result.ensemble_metrics.mae.toFixed(4)
+            r2: this.result.metrics.test_r2.toFixed(4),
+            mse: (this.result.metrics.test_rmse ** 2).toFixed(4),
+            mae: this.result.metrics.test_mae.toFixed(4)
           }
         ]
         
-        // 设置基础模型结果
-        this.baseModelResults = Object.keys(this.result.base_models_metrics).map(model => {
-          const metrics = this.result.base_models_metrics[model]
-          return {
-            model: this.getModelName(model),
-            r2: metrics.r2.toFixed(4),
-            mse: metrics.mse.toFixed(4),
-            mae: metrics.mae.toFixed(4)
-          }
-        })
+        // 设置基础模型结果 - 从对比数据中提取
+        if (this.result.comparison_data && this.result.comparison_data.model_names) {
+          const modelNames = this.result.comparison_data.model_names.slice(0, -1) // 去掉最后一个（ensemble模型）
+          const rmseValues = this.result.comparison_data.test_rmse.slice(0, -1) // 去掉最后一个
+          
+          this.baseModelResults = modelNames.map((model, index) => {
+            return {
+              model: this.getModelDisplayName(model),
+              r2: 'N/A', // RMSE值可用，但其他可能不可用
+              mse: (rmseValues[index] ** 2).toFixed(4),
+              mae: 'N/A'
+            }
+          })
+        }
       } catch (error) {
-        this.$message.error('Stacking集成训练失败')
-        console.error(error)
+        // 清除任何可能存在的结果数据，避免显示空结果
+        this.result = null
+        this.resultTable = []
+        this.baseModelResults = []
+        
+        this.$message.error(`Stacking集成训练失败: ${error.response?.data?.message || error.message || '请检查控制台日志'}`)
+        console.error('训练失败详情:', error.response?.data || error.message || error)
       } finally {
         clearInterval(interval)
         this.loading = false
@@ -155,6 +172,13 @@ export default {
       }
       
       return modelNames[modelKey] || modelKey
+    },
+    
+    // 新增方法：从完整的模型名称（包含目标索引）中获取显示名称
+    getModelDisplayName(fullModelName) {
+      // 从完整名称（例如 'lr_target_0'）中提取基础模型名称
+      const baseName = fullModelName.split('_target_')[0]
+      return this.getModelName(baseName)
     }
   }
 }

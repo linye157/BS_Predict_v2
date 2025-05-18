@@ -65,11 +65,13 @@ export function predictModel(modelName, data) {
 }
 
 // Stacking Ensemble API
-export function trainStackingEnsemble(baseModels, metaModel, targetIdx) {
+export function trainStackingEnsemble(baseModels, metaModel, targetIdx, testSize = 0.2, randomState = 42) {
   return axios.post(`${API_BASE_URL}/stacking/train`, {
     base_models: baseModels,
     meta_model: metaModel,
-    target_idx: targetIdx
+    target_idx: targetIdx,
+    test_size: testSize,
+    random_state: randomState
   })
 }
 
